@@ -1,0 +1,169 @@
+{
+  "name": "Alert o błędach",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -224
+      ],
+      "id": "4d576372-75cf-4c93-856c-842836053fb2",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=⚠️ Błąd w workflow: {{ $('Error Trigger').item.json.workflow.name }} Node: {{ $('Error Trigger').item.json.execution.lastNodeExecuted }} Błąd: {{ $('Error Trigger').item.json.execution.error.message }} \n{{ $('Raz na 30 minut').item.json.pominiete ? ' (+' + $('Raz na 30 minut').item.json.pominiete + ' podobnych wcześniej)' : '' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        -208
+      ],
+      "id": "250e7b92-0524-4618-9a74-a9b4885fe9a1",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:47324/powiadom",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tekst",
+              "value": "={{ 'Proszę Pana, wysypał się workflow ' + $json.workflow.name + ', na kroku ' + $json.execution.lastNodeExecuted + '. Szczegóły są na Telegramie.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -864,
+        -224
+      ],
+      "id": "35fe25b0-31f6-4b19-8598-7d92b408a5a1",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "a737f070-1bac-431b-9d02-60c186491106",
+              "leftValue": "={{ $json.kanal }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -608,
+        -368
+      ],
+      "id": "db9ac4c9-dc2a-46dc-8a59-c169c72b73c4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pamiec = $getWorkflowStaticData('global');\npamiec.ostatni ??= {};\npamiec.pominiete ??= {};\nconst teraz = Date.now();\nconst OKNO = 30 * 60 * 1000;\nconst wyjscie = [];\nfor (const it of $input.all()) {\n  const id = it.json.workflow?.id ?? 'nieznany';\n  if (teraz - (pamiec.ostatni[id] ?? 0) < OKNO) {\n    pamiec.pominiete[id] = (pamiec.pominiete[id] ?? 0) + 1;\n    continue;\n  }\n  it.json.pominiete = pamiec.pominiete[id] ?? 0;\n  pamiec.pominiete[id] = 0;\n  pamiec.ostatni[id] = teraz;\n  wyjscie.push(it);\n}\nfor (const id in pamiec.ostatni) if (teraz - pamiec.ostatni[id] > 86400000) delete pamiec.ostatni[id];\nreturn wyjscie;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        -224
+      ],
+      "id": "c079e243-c338-4be4-b095-f964374a2067",
+      "name": "Raz na 30 minut"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Raz na 30 minut",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Raz na 30 minut": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

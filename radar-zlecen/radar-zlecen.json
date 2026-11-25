@@ -1,0 +1,570 @@
+{
+  "name": "Radar zleceń - Aiko",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1136,
+        -320
+      ],
+      "id": "242ab0e4-06b4-40ff-85f7-5d218e253010",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:11434",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -912,
+        -320
+      ],
+      "id": "e8a520ff-e9ae-4192-8117-00aa77fe919b",
+      "name": "Ollama żyjesz ?",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        -80
+      ],
+      "id": "f8015c5e-76df-444a-a0a8-060b5e5c48a4",
+      "name": "Ollama śpi"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Why Code: rozbicie maili z Freelancera i Useme na osobne zlecenia (parsowanie tekstu/HTML, żaden node tego nie robi)\n// Freelancer: maile po angielsku albo po polsku (od 21.11) - każdy wzorzec łapie oba warianty.\n// Useme (od 24.11): w mailu tylko kategoria + tytuł + link, bez budżetu i opisu (strona za Cloudflare - nie czytamy).\nconst NA_USD = { USD: 1, EUR: 1.08, GBP: 1.27, AUD: 0.65, CAD: 0.73, NZD: 0.6, SGD: 0.74, INR: 0.012, PLN: 0.25 };\n\nfunction zleceniaFreelancer(tekst) {\n  const lista = [];\n  const sekcja = tekst.split(/={3,}\\s*(?:Projects|Projekty)\\s*={3,}/i)[1] || '';\n  const bloki = sekcja.split(/\\n\\s*\\n/).map(b => b.trim()).filter(b => /^(?:Budget|Budżet):/im.test(b));\n  for (const b of bloki) {\n    const budzet = ((b.match(/^(?:Budget|Budżet):\\s*(.+)$/im) || [])[1] || '').trim();\n    const waluta = (budzet.match(/\\b[A-Z]{3}\\b/) || ['USD'])[0];\n    const kurs = NA_USD[waluta] ?? 0;            // nieznana waluta = 0 -> odpadnie na filtrze budżetu\n    const liczby = (budzet.match(/\\d[\\d,.]*/g) || []).map(n => parseFloat(n.replace(/,/g, '')));\n    const maxUsd = Math.round((liczby[1] ?? liczby[0] ?? 0) * kurs);\n    const godzinowy = /\\/\\s*(?:hr|godz)/i.test(budzet);\n    const sciezka = (b.match(/^\\/projects\\/\\S+?\\.html/m) || [''])[0];\n    lista.push({\n      alarm: false,\n      zrodlo: 'Freelancer',\n      tytul: b.split('\\n')[0].trim(),\n      budzet,\n      max_usd: maxUsd,\n      godzinowy,\n      budzet_ok: godzinowy ? maxUsd >= 10 : maxUsd >= 100,\n      umiejetnosci: ((b.match(/^(?:Skills|Umiejętności):\\s*(.+)$/im) || [])[1] || '').trim(),\n      opis: (b.split(/(?:Description|Opis):\\s*/i)[1] || '').split(/\\n\\/projects\\//)[0].replace(/\\s+/g, ' ').trim(),\n      url: sciezka ? 'https://www.freelancer.com' + sciezka : '',\n    });\n  }\n  return lista;\n}\n\nfunction zleceniaUseme(html) {\n  // linki idą przez śledzenie mjt.lu - prawdziwy adres useme.com jest zakodowany (base64) w ostatnim kawałku linku\n  const naUseme = (href) => {\n    if (/useme\\.com\\/pl\\/jobs\\/\\d+/.test(href)) return href;\n    try { return Buffer.from(href.split('/').pop().split('?')[0], 'base64url').toString('utf8'); } catch (e) { return ''; }\n  };\n  const czysc = (t) => t.replace(/&amp;/g, '&').replace(/&quot;/g, '\"').replace(/&#(\\d+);/g, (_, n) => String.fromCharCode(n)).trim();\n  const lista = [];\n  let kategoria = '';\n  const wzor = /Kategoria:\\s*<a[^>]*>([^<]+)<\\/a>|<li[^>]*>\\s*<a href=\"([^\"]+)\"[^>]*>([^<]+)<\\/a>/g;\n  for (const m of html.matchAll(wzor)) {\n    if (m[1]) { kategoria = czysc(m[1]); continue; }       // nagłówek kategorii - dotyczy zleceń pod nim\n    const url = naUseme(m[2]);\n    if (!/^https:\\/\\/useme\\.com\\/pl\\/jobs\\/\\d+\\/?$/.test(url)) continue;  // tylko linki do zleceń\n    lista.push({\n      alarm: false,\n      zrodlo: 'Useme',\n      tytul: czysc(m[3]),\n      budzet: 'nieznany (Useme nie podaje w mailu)',\n      max_usd: 0,\n      godzinowy: false,\n      budzet_ok: true,                                         // nie znamy budżetu - ocenia Ollama po tytule\n      umiejetnosci: kategoria,\n      opis: '',\n      url,\n    });\n  }\n  return lista;\n}\n\nconst wyniki = [];\nfor (const item of $input.all()) {\n  const odKogo = JSON.stringify(item.json.from || '').toLowerCase();\n  const zrodlo = odKogo.includes('useme') ? 'Useme' : 'Freelancer';\n  const zlecenia = zrodlo === 'Useme'\n    ? zleceniaUseme(item.json.html || item.json.textAsHtml || '')\n    : zleceniaFreelancer(item.json.text || '');\n  for (const z of zlecenia) wyniki.push({ json: z });\n  if (!zlecenia.length) {  // mail przyszedł, a nie wyciągnęliśmy z niego ani jednego zlecenia\n    wyniki.push({ json: { alarm: true, zrodlo, mail_id: item.json.id, temat: item.json.subject || '', data: item.json.date || '' } });\n  }\n}\nreturn wyniki;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        -416
+      ],
+      "id": "3a70adc5-dfa2-4dbd-9274-a72c1625f455",
+      "name": "Rozbij na zlecenia"
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -416
+      ],
+      "id": "1ec741f3-2315-40cb-84e3-4f30bb6a3ad7",
+      "name": "Tylko nowe zlecenia !"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ea7f58b6-af18-41d1-921c-016e1f983e46",
+              "leftValue": "={{ $json.budzet_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        272,
+        -416
+      ],
+      "id": "ce46d72e-628f-4f7c-80ca-03060c32230c",
+      "name": "Sensowny budżet"
+    },
+    {
+      "parameters": {
+        "text": "=Zlecenie z {{ $json.zrodlo }}:\nTytuł: {{ $json.tytul }}\nBudżet: {{ $json.budzet }}\n{{ $json.zrodlo === 'Useme' ? 'Ogólna kategoria z portalu (nie sugeruj się nią): ' : 'Umiejętności: ' }}{{ $json.umiejetnosci }}\nOpis: {{ $json.opis || '(brak - znany tylko tytuł)' }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "kategoria",
+              "description": "Rodzaj pracy ustalony z tytułu i opisu (NIE z kategorii portalu). Jedna z: automatyzacja, chatbot AI, integracja API, scraping danych, raporty i arkusze, inne programowanie, strona www, aplikacja mobilna, grafika, tekst, inne.",
+              "required": true
+            },
+            {
+              "name": "powod",
+              "description": "Jedno krótkie zdanie dlaczego taka ocena.",
+              "required": true
+            },
+            {
+              "name": "ocena",
+              "type": "number",
+              "description": "Ocena 0-10, jak bardzo zlecenie pasuje do profilu freelancera.",
+              "required": true
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Oceniasz zlecenia dla freelancera. Najpierw ustal kategorię zlecenia (pole kategoria) z tytułu i opisu. Kategorie portali typu \"Programowanie i IT\" są ogólne i nic nie mówią - nie kieruj się nimi.\n\nKategoria wyznacza maksymalną ocenę:\n- automatyzacja (n8n, Make, Zapier, automatyzacja procesów, maili, raportów) - do 10\n- chatbot AI (bot na stronę, Telegram, WhatsApp, asystent AI) - do 10\n- integracja API (łączenie systemów, webhooki, synchronizacja danych) - do 10\n- scraping danych - do 9\n- raporty i arkusze (Google Sheets, Excel, automatyczne zestawienia) - do 8\n- inne programowanie (aplikacje desktopowe, backend, poprawki w czyimś kodzie) - do 5\n- tekst: copywriting po polsku do 6, teksty lub tłumaczenia po angielsku do 4\n- strona www, sklep internetowy (budowa lub przebudowa) - do 3\n- aplikacja mobilna, grafika, księgowość, ręczne wpisywanie danych - do 2\n- inne - do 4\n\nGdy zlecenie łączy kilka rzeczy (np. sklep + automatyczne wysyłanie zamówień do hurtowni), wybierz kategorię części, którą da się zrobić automatyzacją, i napisz to w powodzie.\n\nSkala w ramach maksimum:\n9-10 = idealnie w profilu i realne do zrobienia przez jedną osobę.\n7-8 = pasuje, drobne braki.\n4-6 = częściowo.\n0-3 = nie pasuje.\nObniż ocenę, gdy opis jest mętny, budżet śmiesznie niski do zakresu albo zlecenie wygląda na scam (płatność poza platformą, darmowe \"zadanie testowe\").\nZlecenia z Useme mają tylko tytuł i ogólną kategorię portalu, bez budżetu i opisu - oceniaj po tytule, nie obniżaj za brak opisu ani budżetu.\nSłowa \"automatyzacja\", \"AI\" czy \"API\" w tytule nie wystarczą - liczy się, na czym polega praca. Specjalistyczne dziedziny spoza profilu = maksymalnie 5: CAD i modele 3D, bezpieczeństwo i testy penetracyjne, konfiguracja gotowych narzędzi analitycznych (PostHog, Google Analytics), DevOps i serwery, programowanie w konkretnym języku bez elementu automatyzacji procesów.\nGdy znasz tylko tytuł, daj 9-10 wyłącznie wtedy, gdy tytuł wprost mówi o n8n/Make/Zapier, chatbocie lub asystencie AI, łączeniu systemów albo automatyzacji maili, dokumentów czy raportów. W pozostałych przypadkach z samym tytułem maksymalnie 7. \n\nNiczego nie obiecuj.\nOdpowiadaj tylko wyciągniętymi polami."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        -416
+      ],
+      "id": "5a743b50-eb44-4943-8584-6510e6bd64ab",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "model": "gemma4:latest",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -192
+      ],
+      "id": "e07dfbab-ef58-460f-85e6-958e73cea4d3",
+      "name": "Ollama Model"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "13bf4258-a083-482f-a78c-d8f0730a31c6",
+              "leftValue": "={{ $json.output.ocena }}",
+              "rightValue": 7,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        864,
+        -416
+      ],
+      "id": "32391541-17e8-44da-972d-efcd2d6ba3e4",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You write a short proposal (bid) for a project on {{ $('Sensowny budżet').item.json.zrodlo }}, as the freelancer himself, in first person.\nWrite it in {{ $('Sensowny budżet').item.json.zrodlo === 'Useme' ? 'Polish' : 'English' }}.\n\nPROJECT\nTitle: {{ $('Sensowny budżet').item.json.tytul }}\nBudget: {{ $('Sensowny budżet').item.json.budzet }}\nSkills: {{ $('Sensowny budżet').item.json.umiejetnosci }}\nDescription: {{ $('Sensowny budżet').item.json.opis || '(no description, only the title is known)' }}\nType of work: {{ $('Information Extractor').item.json.output.kategoria }}\n\nFACTS ABOUT ME (use only these, never invent anything else):\n- I build automations in n8n with AI models (OpenAI, local models via Ollama), REST APIs and webhooks.\n- Things I have built: a Gmail sorter with AI, a daily morning report, a price monitor for online shops, a lead collection workflow, a Telegram bot that replies with voice messages.\n- I am new on this platform, no reviews yet. I am based in Poland.\n\nRULES:\n- Maximum 6 short sentences, plain text, no emojis, no subject line, no placeholders like [Name], no price.\n- Start with the client's problem in one sentence, not with \"Hi, I am...\".\n- Then say concretely how I would do it: which tools and 2-3 steps.\n- If there is no description, do not guess the details and never mention that the description is missing - just ask about the most important detail in the final question.\n- Never write \"I have experience in...\", \"As a programmer...\" or similar about anything that is not literally listed in FACTS ABOUT ME.\n- If the main work is outside automation (security testing, 3D/CAD, design, mobile apps), do not offer to do it. Offer only the part that can be automated, or say it is outside my focus.\n- If the project needs skills that are not in my facts (design, writing, marketing), do not claim them. Say only which part I can automate, or that it is outside my focus.\n- Do not invent experience, clients, years, numbers, results or guarantees like \"100%\".\n- Write like a normal person in simple language. Never use these words: leverage, robust, seamless, seamlessly, crucial, ensure, streamline, dedicated, cutting-edge. In Polish also avoid: kompleksowy, innowacyjny, dedykowany, profesjonalny.\n- End with exactly one question about the project.\nWrite only the proposal text.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1088,
+        -416
+      ],
+      "id": "627fc4d8-879c-4867-89b9-e3284113893c",
+      "name": "Szkic oferty"
+    },
+    {
+      "parameters": {
+        "content": "Piszesz krótką ofertę (bid) do projektu na Freelancer.com, jako sam freelancer, w pierwszej osobie.\n\nPROJEKT\nTytuł: (tytuł zlecenia)\nBudżet: (budżet)\nUmiejętności: (wymagane skille)\nOpis: (opis zlecenia)\n\nFAKTY O MNIE (używaj tylko tych, nigdy nie wymyślaj niczego innego):\n- Buduję automatyzacje w n8n z modelami AI (OpenAI, lokalne modele przez Ollamę), REST API i webhookami.\n- Co zbudowałem: sorter Gmaila z AI, codzienny poranny raport, monitor cen w sklepach internetowych, workflow do zbierania leadów, bot na Telegramie odpowiadający głosówkami.\n- Jestem nowy na Freelancerze, nie mam jeszcze opinii. Jestem z Polski.\n\nZASADY:\n- Maks. 6 krótkich zdań (zamiast 70-120 słów).\n- Jeśli projekt wymaga umiejętności spoza moich faktów (grafika, pisanie, marketing), nie przypisuj ich sobie. Napisz tylko, którą część mogę zautomatyzować, albo że to poza moim zakresem.\n- Nie wymyślaj doświadczenia, klientów, lat, liczb, wyników ani gwarancji typu \"100%\".\n- Pisz jak normalny człowiek, prostym angielskim. Nigdy nie używaj słów: leverage, robust, seamless(ly), crucial, ensure, streamline, dedicated, cutting-edge.",
+        "height": 720,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        -1120
+      ],
+      "id": "501d04d4-d0bb-4d3a-8321-3916ae776d72",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": "gemma4:latest",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        -208
+      ],
+      "id": "4ffa00be-218e-4315-9cb8-6ea013a888c1",
+      "name": "Ollama Chat Model"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=🎯 {{ $('Information Extractor').item.json.output.ocena }}/10 · {{ $('Sensowny budżet').item.json.zrodlo }} · {{ $('Sensowny budżet').item.json.budzet }}\n{{ $('Sensowny budżet').item.json.tytul }}\n\n🏷️ {{ $('Information Extractor').item.json.output.kategoria }}\n💡 {{ $('Information Extractor').item.json.output.powod }}\n🔗 {{ $('Sensowny budżet').item.json.url }}\n\n✍️ Szkic oferty:\n{{ $('Szkic oferty').item.json.text }}\n{{ $('Sensowny budżet').item.json.zrodlo === 'Useme' ? '' : '\\n🇵🇱 Po polsku:\\n' + $json.text }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        -416
+      ],
+      "id": "b5342e7e-445d-418d-a555-882796fad1b0",
+      "name": "Do mnie na Telegram"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Przetłumacz na polski poniższą ofertę dla klienta z Freelancer.com.\n\nZasady:\n- Tłumacz sens, nie słowo w słowo. Ma brzmieć naturalnie, jak polski tekst napisany przez człowieka.\n- Zostaw bez tłumaczenia nazwy narzędzi i terminy techniczne: n8n, webhook, API, OpenAI, Ollama, WhatsApp, Telegram, chatbot.\n- Nie dodawaj, nie usuwaj i nie poprawiaj treści, nawet jeśli coś wydaje się niezręczne - masz pokazać dokładnie to, co mówi angielski tekst.\n- Zachowaj pytanie na końcu jako pytanie.\n- Odpowiedz tylko tłumaczeniem, bez wstępu i komentarzy.\n\nTekst:\n{{ $json.text }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1440,
+        -416
+      ],
+      "id": "cac1972a-bfad-49b8-950c-76e7a8864aa0",
+      "name": "Tłumaczenie"
+    },
+    {
+      "parameters": {
+        "model": "gemma4:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -208
+      ],
+      "id": "ab7fd849-145e-456e-b7ad-9b6eca977394",
+      "name": "Ollama Chat Model1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "b9c2091a-a861-46a6-807d-33c76b79810f",
+              "leftValue": "={{ $json.alarm }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -240,
+        -416
+      ],
+      "id": "c6ee5f35-420d-4317-8c8c-969c3e8bc952",
+      "name": "Parser zadziałał"
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.mail_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -96
+      ],
+      "id": "ac39e47a-cd75-422b-b6a7-676e4d756068",
+      "name": "Alarm raz na mail"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=⚠️ Radar: przyszedł mail ze zleceniami ({{ $json.zrodlo }}), ale nie wyciągnąłem z niego żadnego zlecenia.\nPewnie zmienił się format maila - trzeba poprawić „Rozbij na zlecenia”.\n\n📧 {{ $json.temat }}\n🕒 {{ $json.data }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        -96
+      ],
+      "id": "60bd15d2-7594-4975-a7ce-c4ee6dff30c6",
+      "name": "Alarm na Telegramie"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "simple": false,
+        "filters": {
+          "q": "newer_than:1d {(from:notifications.freelancer.com subject:\"might interest you\") (from:useme.com subject:\"nowe zlecenia\")}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -688,
+        -416
+      ],
+      "id": "fd3eeb54-5070-4591-9ca3-ba0b88743f23",
+      "name": "Maile z zleceniami"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ollama żyjesz ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama żyjesz ?": {
+      "main": [
+        [
+          {
+            "node": "Maile z zleceniami",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama śpi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rozbij na zlecenia": {
+      "main": [
+        [
+          {
+            "node": "Parser zadziałał",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tylko nowe zlecenia !": {
+      "main": [
+        [
+          {
+            "node": "Sensowny budżet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sensowny budżet": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Szkic oferty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Szkic oferty",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Szkic oferty": {
+      "main": [
+        [
+          {
+            "node": "Tłumaczenie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Do mnie na Telegram": {
+      "main": [
+        []
+      ]
+    },
+    "Tłumaczenie": {
+      "main": [
+        [
+          {
+            "node": "Do mnie na Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Tłumaczenie",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser zadziałał": {
+      "main": [
+        [
+          {
+            "node": "Tylko nowe zlecenia !",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alarm raz na mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarm raz na mail": {
+      "main": [
+        [
+          {
+            "node": "Alarm na Telegramie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Maile z zleceniami": {
+      "main": [
+        [
+          {
+            "node": "Rozbij na zlecenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

@@ -1,0 +1,321 @@
+{
+  "name": "Rachunki - przypomnienie",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1424,
+        -144
+      ],
+      "id": "5fa3ba79-61ff-4de6-bb41-faa355ce5690",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_RACHUNKI",
+          "mode": "list",
+          "cachedResultName": "Rachunki"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "zaplacone",
+              "condition": "isFalse"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1200,
+        -144
+      ],
+      "id": "7b487d1b-5ddb-40ed-bf1f-e604a6a7b428",
+      "name": "Niezapłacone"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "f0707cd7-8eee-42cb-b3f8-5dbc420eec4c",
+              "leftValue": "={{ $json.termin.toDateTime().setZone('Europe/Warsaw').toISODate() }}",
+              "rightValue": "={{ $now.setZone('Europe/Warsaw').toISODate() }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "18912742-2fdb-48ef-9a2d-f255fe0acac5",
+              "leftValue": "={{ $json.termin.toDateTime().setZone('Europe/Warsaw').toISODate() }}",
+              "rightValue": "={{ $now.setZone('Europe/Warsaw').plus({days: 1}).toISODate() }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        -976,
+        -144
+      ],
+      "id": "9878c90d-fc82-46f9-97b1-ca9f31db1c90",
+      "name": "Dziś albo jutro"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "37dafa28-bd59-4762-8afd-28363c1b1a78",
+              "name": "linia",
+              "value": "={{ ($json.termin.toDateTime().setZone('Europe/Warsaw').toISODate() === $now.setZone('Europe/Warsaw').toISODate() ? '🔴 DZIŚ' : '🟡 jutro') + ' - ' + $json.nazwa + ' - ' + $json.kwota + ' zł' + ($json.kto !== 'paweł' ? ' (' + $json.kto + ')' : '') }}",
+              "type": "string"
+            },
+            {
+              "id": "9801c880-7d7f-4dff-aec4-44ec14e28421",
+              "name": "mowa",
+              "value": "={{ ($json.termin.toDateTime().setZone('Europe/Warsaw').toISODate() === $now.setZone('Europe/Warsaw').toISODate() ? 'Dziś' : 'Jutro') + ' ' + $json.nazwa + ', ' + $json.kwota + ' zł' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -752,
+        -144
+      ],
+      "id": "099ae708-9de1-4c74-a244-c0f97e659a77",
+      "name": "Linijka"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "linia"
+            },
+            {
+              "fieldToAggregate": "mowa"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -144
+      ],
+      "id": "88bae325-9803-4c7a-a95a-1b9b843081c5",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=⏰ Rachunki do zapłaty:\n\n{{ $('Aggregate').first().json.linia.join('\\n') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        -128
+      ],
+      "id": "b3bd2070-916b-4c65-b63e-8121b0948926",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:47324/powiadom",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tekst",
+              "value": "={{ 'Proszę Pana, rachunki. ' + $json.mowa.join('. ') + '.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -336,
+        -144
+      ],
+      "id": "f595b105-08e7-422e-98ba-023815e87725",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "6f8840d9-fc5c-4ab1-a97a-0463c735039f",
+              "leftValue": "={{ $json.kanal }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -64,
+        -272
+      ],
+      "id": "71c2b7c2-77fc-4385-8d40-e1bd40fad443",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Niezapłacone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Niezapłacone": {
+      "main": [
+        [
+          {
+            "node": "Dziś albo jutro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dziś albo jutro": {
+      "main": [
+        [
+          {
+            "node": "Linijka",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Linijka": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

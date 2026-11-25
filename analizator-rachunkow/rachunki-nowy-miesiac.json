@@ -1,0 +1,340 @@
+{
+  "name": "Rachunki - nowy miesiąc",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -928,
+        -256
+      ],
+      "id": "52a99c8c-590d-4172-a648-aea22fbbd694",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_OPLATY_STALE",
+          "mode": "list",
+          "cachedResultName": "Oplaty_stale"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "aktywna",
+              "condition": "isTrue"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -704,
+        -256
+      ],
+      "id": "8270ffd4-c1d8-43c0-a326-b2dd9c31c2ec",
+      "name": "Opłaty aktywne"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_RACHUNKI",
+          "mode": "list",
+          "cachedResultName": "Rachunki"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "oplata_id",
+              "keyValue": "={{ $json.oplata_id }}"
+            },
+            {
+              "keyName": "okres",
+              "keyValue": "={{ $json.okres }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        -256
+      ],
+      "id": "91e6b729-69c2-432d-abdf-59ef94aa6926",
+      "name": "Jeszcze nie ma ?"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_RACHUNKI",
+          "mode": "list",
+          "cachedResultName": "Rachunki"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "zaplacone": "={{ $json.zaplacone }}",
+            "oplata_id": "={{ $json.oplata_id }}",
+            "nazwa": "={{ $json.nazwa }}",
+            "kategoria": "={{ $json.kategoria }}",
+            "kwota": "={{ $json.kwota }}",
+            "okres": "={{ $json.okres }}",
+            "termin": "={{ $json.termin }}",
+            "kto": "={{ $json.kto }}",
+            "zrodlo": "={{ $json.zrodlo }}",
+            "data_zaplaty": "={{ $json.data_zaplaty }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "oplata_id",
+              "displayName": "oplata_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "nazwa",
+              "displayName": "nazwa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "kategoria",
+              "displayName": "kategoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "kwota",
+              "displayName": "kwota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "okres",
+              "displayName": "okres",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "termin",
+              "displayName": "termin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "kto",
+              "displayName": "kto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "zrodlo",
+              "displayName": "zrodlo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "zaplacone",
+              "displayName": "zaplacone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "data_zaplaty",
+              "displayName": "data_zaplaty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -32,
+        -256
+      ],
+      "id": "fed25948-cde1-48f3-9879-f62bccc76198",
+      "name": "Dodaj rachunek"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -256
+      ],
+      "id": "54b9ea1c-7afe-4aed-8055-2339fbb1c0cc",
+      "name": "Zbierz"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=🧾 Rachunki na {{ $json.data[0].okres }}: {{ $json.data.length }} szt., razem {{ $json.data.reduce((s, r) => s + r.kwota, 0) }} zł\n\n{{ $json.data.map(r => (r.zaplacone ? '✅ ' : '• ') + r.nazwa + ' - ' + r.kwota + ' zł, do ' + DateTime.fromJSDate(new Date(r.termin)).setZone('Europe/Warsaw').toFormat('dd.MM') + (r.kto !== 'paweł' ? ' (' + r.kto + ')' : '')).join('\\n') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        -256
+      ],
+      "id": "d05f8999-2183-4459-b942-f101e69e9f4d",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Why Code: arytmetyka na datach (co ile miesięcy, krótszy luty, koniec rat) - w Filter/Set byłoby nieczytelne\nconst TEST_MIESIAC = '';         // test: np. '2027-01' = wygeneruj tylko ten miesiąc. Na produkcji: ''\nconst OD_MIESIACA = '2026-12';   // wcześniejszych nie generujemy (listopad zapłacony poza systemem)\nconst STREFA = 'Europe/Warsaw';\nconst data = v => v instanceof Date ? DateTime.fromJSDate(v, { zone: STREFA }) : DateTime.fromISO(String(v), { zone: STREFA });\n\n// Które miesiące: zawsze bieżący (gdyby komp był wyłączony od 25. do początku miesiąca),\n// a od 25. dnia także następny. Duplikaty odsiewa \"Jeszcze nie ma?\", więc odpalanie co godzinę nic nie psuje.\nconst teraz = DateTime.now().setZone(STREFA);\nconst cele = (TEST_MIESIAC\n  ? [DateTime.fromISO(TEST_MIESIAC + '-01', { zone: STREFA })]\n  : [teraz.startOf('month'), ...(teraz.day >= 25 ? [teraz.plus({ months: 1 }).startOf('month')] : [])]\n).filter(cel => cel.toFormat('yyyy-MM') >= OD_MIESIACA);\n\nconst wyniki = [];\nfor (const cel of cele) {\n  const okres = cel.toFormat('yyyy-MM');\n  for (const item of $input.all()) {\n    const o = item.json;\n    if (!o.od_kiedy) continue;                                   // bez daty startu nie wiemy, kiedy wypada\n    const start = data(o.od_kiedy);\n    const ileMies = (cel.year - start.year) * 12 + (cel.month - start.month);\n    if (ileMies < 0 || ileMies % (o.co_ile_mies || 1) !== 0) continue;   // jeszcze nie obowiązuje / nie ten miesiąc\n    if (o.koniec && data(o.koniec).startOf('month') < cel) continue;     // raty już spłacone\n    const dzien = Math.min(o.dzien_platnosci || 1, cel.daysInMonth);    // 31. w lutym -> 28/29\n    const termin = cel.set({ day: dzien, hour: 12 });\n    const automat = o.zrodlo === 'automat';\n    wyniki.push({ json: {\n      oplata_id: o.id, nazwa: o.nazwa, kategoria: o.kategoria, kwota: o.kwota ?? 0,\n      okres, termin: termin.toISO(), kto: o.kto, zrodlo: o.zrodlo,\n      zaplacone: automat, data_zaplaty: automat ? termin.toISO() : null,\n    } });\n  }\n}\nreturn wyniki;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -256
+      ],
+      "id": "747461be-c596-49e5-bc6a-a9d29da7b27a",
+      "name": "Co wypada (ten i następny miesiąc)"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Opłaty aktywne",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opłaty aktywne": {
+      "main": [
+        [
+          {
+            "node": "Co wypada (ten i następny miesiąc)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jeszcze nie ma ?": {
+      "main": [
+        [
+          {
+            "node": "Dodaj rachunek",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dodaj rachunek": {
+      "main": [
+        [
+          {
+            "node": "Zbierz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zbierz": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Co wypada (ten i następny miesiąc)": {
+      "main": [
+        [
+          {
+            "node": "Jeszcze nie ma ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

@@ -1,0 +1,1692 @@
+{
+  "name": "Monitor cen komponentów - Dyski SSD",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1584,
+        -592
+      ],
+      "id": "9c697366-1fb2-464f-94d8-4f4450e2f216",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_CENY_DYSKÓW_SSD",
+          "mode": "list",
+          "cachedResultName": "Ceny dysków SSD"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nazwa": "={{ $json.nazwa }}",
+            "sklep": "={{ $json.sklep }}",
+            "url": "={{ $json.url }}",
+            "cena": "={{ $json.cena }}",
+            "cena_przed": "={{ $json.poprzednia_cena }}",
+            "sprawdzono": "={{ $json.sprawdzono }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nazwa",
+              "displayName": "nazwa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sklep",
+              "displayName": "sklep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cena",
+              "displayName": "cena",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cena_przed",
+              "displayName": "cena_przed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sprawdzono",
+              "displayName": "sprawdzono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        -1008
+      ],
+      "id": "2adaa514-96b5-4b9f-8f85-528e8816b319",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "cena",
+              "cssSelector": "meta[property=\"product:price:amount\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "cena_przed",
+              "cssSelector": "meta[property=\"product:original_price:amount\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "nazwa",
+              "cssSelector": "h1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        -416
+      ],
+      "id": "43147c44-6fb9-4c1d-be85-63c618d16102",
+      "name": "Wyciąganie cen z ogłoszenia"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b80f4bb7-c4d7-405a-aeb3-1e959aa56819",
+              "name": "cena",
+              "value": "={{ Number($json.cena) > 0 ? Number($json.cena) : null }}",
+              "type": "number"
+            },
+            {
+              "id": "edcd621c-5f61-4bb4-9b41-0d4971dd079a",
+              "name": "cena_przed",
+              "value": "={{ Number($json.cena_przed) > 0 ? Number($json.cena_przed) : null }}",
+              "type": "number"
+            },
+            {
+              "id": "917b2086-c310-4e79-8209-2e5506b6b6ff",
+              "name": "znizka_proc",
+              "value": "={{ Number($json.cena_przed) > 0 ? Math.round((1 - Number($json.cena) / Number($json.cena_przed)) * 100) : 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "647448fb-a5e4-4736-ad1d-1e99bca5560b",
+              "name": "sklep",
+              "value": "={{ $('Pobierz produkty').item.json.sklep }}",
+              "type": "string"
+            },
+            {
+              "id": "d572862a-2492-458a-b3b8-a140fa7eaba2",
+              "name": "url",
+              "value": "={{ $('Pobierz produkty').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "e8fca065-4094-4549-887e-58e0e738b3a4",
+              "name": "sprawdzono",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "6813563a-ffdc-4f8d-b564-d32de8657091",
+              "name": "poprzednia_cena",
+              "value": "={{ $('Pobierz produkty').item.json.ostatnia_cena ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "516d455b-b321-423d-ba64-6777e399ce65",
+              "name": "min_cena_30d",
+              "value": "={{ $('Pobierz produkty').item.json.min_cena_30d ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "fa4148e1-9640-4c2d-af3f-1cd601df62f5",
+              "name": "=blad",
+              "value": "={{ $('Pobierz produkty').item.json.blad === true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "c5ccd72f-a930-4274-8175-a645796ab892",
+              "name": "max_cena_30d",
+              "value": "={{ $('Pobierz produkty').item.json.max_cena_30d ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "0f80f107-8d18-448b-be1d-3700e0e28a42",
+              "name": "najtanszy_sklep",
+              "value": "={{ $json.najtanszy_sklep ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "9912d710-a374-4d64-a2f9-9896ccebef70",
+              "name": "liczba_ofert",
+              "value": "={{ $json.liczba_ofert ?? null }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -224,
+        -560
+      ],
+      "id": "6051e270-4cac-4bb4-9857-14d6c80b5c42",
+      "name": "Dane produktu"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7dc69946-1c80-4831-b195-6d9a9fecf128",
+              "name": "zmiana_proc",
+              "value": "={{ $json.poprzednia_cena > 0 ? Math.round((($json.cena - $json.poprzednia_cena) / $json.poprzednia_cena) * 100) : 0 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        384,
+        -384
+      ],
+      "id": "05d67127-f68f-42fd-97f4-039cb63e9c20",
+      "name": "Porównaj"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -96
+      ],
+      "id": "0eba7d91-e32c-4ea4-8b75-39c165553c10",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_DYSKI_SSD_PRODUKTY",
+          "mode": "list",
+          "cachedResultName": "Dyski SSD/Produkty"
+        },
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1296,
+        -560
+      ],
+      "id": "d3a703d0-bd7b-4da8-90ff-1cd360f88d4d",
+      "name": "Pobierz produkty"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_DYSKI_SSD_PRODUKTY",
+          "mode": "list",
+          "cachedResultName": "Dyski SSD/Produkty"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "url",
+              "keyValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ostatnia_cena": "={{ $json.cena }}",
+            "ostatnio_sprawdzane": "={{ $json.sprawdzono }}",
+            "blad": "={{ false }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sklep",
+              "displayName": "sklep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "aktywny",
+              "displayName": "aktywny",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnia_cena",
+              "displayName": "ostatnia_cena",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "min_cena_30d",
+              "displayName": "min_cena_30d",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "max_cena_30d",
+              "displayName": "max_cena_30d",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnio_sprawdzane",
+              "displayName": "ostatnio_sprawdzane",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "blad",
+              "displayName": "blad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -640
+      ],
+      "id": "ec86c47c-caeb-4695-89b8-781c1f43327d",
+      "name": "Update row(s)"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1584,
+        -384
+      ],
+      "id": "4d5ef66f-5b8d-42a3-9215-cfb48152da9a",
+      "name": "Sprawdzenie co 2h"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -848
+      ],
+      "id": "c34a81b4-1f9a-45c7-a459-50c882f795b4",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -272
+      ],
+      "id": "4a2a31c2-a9e7-41fd-b559-c920112e055b",
+      "name": "No Operation, do nothing4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "42c9803b-a74d-4372-99ad-4cec35a08602",
+              "leftValue": "={{ $json.cena }}",
+              "rightValue": "={{ $json.max_cena_30d * 0.95 }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "19e0d111-c515-4c74-b62b-d97841d6da19",
+              "leftValue": "={{ $json.cena }}",
+              "rightValue": "={{ $json.poprzednia_cena }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "9ebe1247-b02b-4b97-816e-554d8eb91e95",
+              "leftValue": "={{ $json.cena }}",
+              "rightValue": "={{ $json.min_cena_30d }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        688,
+        -448
+      ],
+      "id": "81aab414-ec43-4ce6-92c9-5c086fcee2b4",
+      "name": "IF okazja"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d689455d-83ac-419c-b0ec-aa02e4d9fc2c",
+              "leftValue": "={{ $json.cena }}",
+              "rightValue": "={{ $json.poprzednia_cena }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        528,
+        -896
+      ],
+      "id": "6adb4700-576b-4aca-806b-94ae9809d6c4",
+      "name": "IF Zmiana ceny"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "a4408ee3-69ff-47dc-b679-e512da49153e",
+              "leftValue": "={{ Number($json.cena) > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "0a588fa1-597d-49c0-b1cb-d1bf9fd27156",
+              "leftValue": "={{ $json.sklep !== 'ceneo' || $json.liczba_ofert > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -32,
+        -560
+      ],
+      "id": "f625d30c-0680-409b-b5f4-26b6157813d0",
+      "name": "IF Czy cena poprawna ?"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=Nie udało się pobrać url = {{ $('Pobierz produkty').item.json.url }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -608,
+        -96
+      ],
+      "id": "8b232737-0b51-4d43-ab9b-695122180f89",
+      "name": "Alert o błędzie w pobraniu URL"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=⚠️ Nie odczytano ceny Sklep: {{ $json.sklep }} URL: {{ $json.url }} {{ Number($json.cena) > 0 ? '⚠️ Cena OK (' + $json.cena + ' zł), ale lista ofert pusta (liczba ofert: ' + $json.liczba_ofert + '). Możliwa zmiana HTML ofert na Ceneo.' : '⚠️ Nie odczytano ceny. Możliwa zmiana strony sklepu.' }}. \n🤖 Wygenerowano automatycznie przez n8n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        144
+      ],
+      "id": "2429acd1-a643-41ab-899c-d55a3b57a8a2",
+      "name": "Alert o błędzie w odczycie ceny"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=🔥 Okazja: {{ $json.nazwa }} Cena: {{ $json.cena }} zł (poprzednio {{ $json.poprzednia_cena }} zł, zmiana {{ $json.zmiana_proc }}%) {{ $json.url }}. Najniższa cena sprzed 30 dni: {{ $json.min_cena_30d }} zł. {{ $('Dane produktu').item.json.najtanszy_sklep ? '🏪 Najtaniej: ' + $('Dane produktu').item.json.najtanszy_sklep : '' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        -544
+      ],
+      "id": "782ebdec-c237-402d-a87c-766a49e884c7",
+      "name": "OKAZJA !"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_DYSKI_SSD_PRODUKTY",
+          "mode": "list",
+          "cachedResultName": "Dyski SSD/Produkty"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "url",
+              "keyValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "blad": true
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sklep",
+              "displayName": "sklep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "aktywny",
+              "displayName": "aktywny",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnia_cena",
+              "displayName": "ostatnia_cena",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "min_cena_30d",
+              "displayName": "min_cena_30d",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnio_sprawdzane",
+              "displayName": "ostatnio_sprawdzane",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "blad",
+              "displayName": "blad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        352
+      ],
+      "id": "6e91bd0f-f558-4d27-b605-8c7913090591",
+      "name": "Update row(s)1"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "✅ znów działa",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        -144
+      ],
+      "id": "b2d71be3-3d52-4703-8e39-d30d5a6fbbb4",
+      "name": "Strona ponownie działa"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "7e97d2cb-7ca5-4bcc-9a16-8f464f8e0225",
+              "leftValue": "={{ $json.blad }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        304
+      ],
+      "id": "3a8431a9-ae23-4e32-95eb-2cec6b5f09f1",
+      "name": "Czy nowy błąd"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d74050fd-569c-4173-8519-6a6575475024",
+              "leftValue": "={{ $json.blad }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        288,
+        -128
+      ],
+      "id": "b2e0fa3c-c78e-4864-a749-88e5b746306e",
+      "name": "Czy wróciło?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_DYSKI_SSD_PRODUKTY",
+          "mode": "list",
+          "cachedResultName": "Dyski SSD/Produkty"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "url",
+              "keyValue": "={{ $('Pobierz produkty').item.json.url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "blad": true
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sklep",
+              "displayName": "sklep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "aktywny",
+              "displayName": "aktywny",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnia_cena",
+              "displayName": "ostatnia_cena",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "min_cena_30d",
+              "displayName": "min_cena_30d",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ostatnio_sprawdzane",
+              "displayName": "ostatnio_sprawdzane",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "blad",
+              "displayName": "blad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -608,
+        160
+      ],
+      "id": "79c9f214-3f9e-420f-a0ae-4039540b5fe9",
+      "name": "Update row(s)2"
+    },
+    {
+      "parameters": {
+        "content": "Aktualizacja ceny / Okazja do kupna!\n",
+        "height": 80,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        -512
+      ],
+      "typeVersion": 1,
+      "id": "d38a094c-33c0-406a-b884-e0aba83028f0",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        96
+      ],
+      "id": "897628ec-2a7b-4ca3-bc07-13883c6043bd",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "content": "Błąd w pobraniu HTML strony oraz alert na Telegram o tym błędzie\n",
+        "height": 96,
+        "width": 336,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -624,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "896e0ae5-3395-41fd-82fb-adce5453422a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59b48cf0-d91c-4dcd-bc7b-2112826dbd0b",
+              "name": "cena",
+              "value": "={{ $json.data.match(/\"price\":(\\d+(?:\\.\\d+)?)/)?.[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "c87efe26-133a-4b66-a821-7998ddf7136c",
+              "name": "nazwa",
+              "value": "={{ $json.data.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/)?.[1]?.trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -416,
+        -736
+      ],
+      "id": "3ae15bdf-ee85-41af-a010-e2517b343c71",
+      "name": "Dane ProLine"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Pobierz produkty').item.json.sklep }}",
+                    "rightValue": "proline",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ab3fe9a8-6427-4456-9cea-331c45627d07"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ProLine"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        -624,
+        -592
+      ],
+      "id": "943d9f90-3ab5-46e0-beae-777602e63a64",
+      "name": "Który sklep ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c57826a4-b2a2-4cc9-830d-f71200f85541",
+              "leftValue": "={{ $json.sklep }}",
+              "rightValue": "ceneo",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -1088,
+        -560
+      ],
+      "id": "23562fb7-6b3a-44a5-a4bb-cf141d3d7148",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "pl-PL,pl;q=0.9,en;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 3000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -848,
+        -640
+      ],
+      "id": "31f9aa34-568f-4b27-8d59-16180e88161b",
+      "name": "HTTP CENEO",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 3000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -848,
+        -512
+      ],
+      "id": "4e3b5258-a1c7-41ae-b8c6-6a123059b7e8",
+      "name": "HTTP RESZTA SKLEPÓW",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Sprawdzenie z jakiego sklepu pochodzi produkt.\n",
+        "height": 304,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -880,
+        -720
+      ],
+      "typeVersion": 1,
+      "id": "fe959d61-b8a7-4f83-92b0-745bdac3a94e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "b584ec11-6647-44e5-9ecd-800ddc4e7ffe",
+              "leftValue": "={{ $json.blad }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -864,
+        -160
+      ],
+      "id": "d5174e06-9b52-41d4-a13c-3fba96e561a1",
+      "name": "IF Błąd"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "sklepy",
+              "cssSelector": "=[data-shopurl][data-price]",
+              "returnValue": "attribute",
+              "attribute": "data-shopurl",
+              "returnArray": true
+            },
+            {
+              "key": "ceny_ofert",
+              "cssSelector": "=[data-shopurl][data-price]",
+              "returnValue": "attribute",
+              "attribute": "data-price",
+              "returnArray": true
+            },
+            {
+              "key": "produkty_id",
+              "cssSelector": "=[data-shopurl][data-price]",
+              "returnValue": "attribute",
+              "attribute": "data-productid",
+              "returnArray": true
+            },
+            {
+              "key": "cena",
+              "cssSelector": "meta[property=\"product:price:amount\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "nazwa",
+              "cssSelector": "h1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        -976
+      ],
+      "id": "4b571cf6-04b5-4fc6-8973-8e189fc70dfb",
+      "name": "HTML CENEO"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da97f81d-8e01-4a71-9dad-223b672c82fb",
+              "name": "oferty",
+              "value": "={{ $json.sklepy.map((s, i) => ({\n  sklep: s,\n  cena: Number(String($json.ceny_ofert[i]).replace(',', '.')),\n  id: $json.produkty_id[i]\n})).filter(o => o.id === $('Pobierz produkty').item.json.url.match(/ceneo\\.pl\\/(\\d+)/)?.[1])",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -512,
+        -976
+      ],
+      "id": "a82ae5af-3f52-49d8-b323-12306c92eea6",
+      "name": "Oferty"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb01e88b-5515-4ded-8544-9708bfbc818a",
+              "name": "liczba_ofert",
+              "value": "={{ $json.oferty.length }}",
+              "type": "number"
+            },
+            {
+              "id": "24e7b36c-7b98-47fd-96c0-52b537577097",
+              "name": "min_cena",
+              "value": "={{ $json.oferty.length ? $json.oferty.reduce((a, b) => b.cena < a.cena ? b : a).cena : null }}",
+              "type": "number"
+            },
+            {
+              "id": "b7d4d0c9-4c92-436d-a0cf-534ac30bbb3d",
+              "name": "najtanszy_sklep",
+              "value": "={{ $json.oferty.length ? $json.oferty.reduce((a, b) => b.cena < a.cena ? b : a).sklep : null }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -304,
+        -976
+      ],
+      "id": "7356d974-2619-482a-b09c-cd078f7b90c6",
+      "name": "Dane Ceneo"
+    },
+    {
+      "parameters": {
+        "events": [
+          "init"
+        ]
+      },
+      "type": "n8n-nodes-base.n8nTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        -208
+      ],
+      "id": "5ea51e72-2689-447e-8058-b145a86fb2af",
+      "name": "n8n Trigger"
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1584,
+        -208
+      ],
+      "id": "3b566c8a-abfc-46f8-ac3f-5b793462afe3",
+      "name": "Wait"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Pobierz produkty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wyciąganie cen z ogłoszenia": {
+      "main": [
+        [
+          {
+            "node": "Dane produktu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dane produktu": {
+      "main": [
+        [
+          {
+            "node": "IF Czy cena poprawna ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Porównaj": {
+      "main": [
+        [
+          {
+            "node": "IF okazja",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row(s)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Zmiana ceny",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        []
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        []
+      ]
+    },
+    "Pobierz produkty": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdzenie co 2h": {
+      "main": [
+        [
+          {
+            "node": "Pobierz produkty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)": {
+      "main": [
+        []
+      ]
+    },
+    "IF okazja": {
+      "main": [
+        [
+          {
+            "node": "OKAZJA !",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Zmiana ceny": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Czy cena poprawna ?": {
+      "main": [
+        [
+          {
+            "node": "Porównaj",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Czy wróciło?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Czy nowy błąd",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert o błędzie w pobraniu URL": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Czy nowy błąd": {
+      "main": [
+        [
+          {
+            "node": "Alert o błędzie w odczycie ceny",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Czy wróciło?": {
+      "main": [
+        [
+          {
+            "node": "Strona ponownie działa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Dane ProLine": {
+      "main": [
+        [
+          {
+            "node": "Dane produktu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Który sklep ?": {
+      "main": [
+        [
+          {
+            "node": "Dane ProLine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wyciąganie cen z ogłoszenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP CENEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP RESZTA SKLEPÓW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP RESZTA SKLEPÓW": {
+      "main": [
+        [
+          {
+            "node": "Który sklep ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Błąd",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP CENEO": {
+      "main": [
+        [
+          {
+            "node": "HTML CENEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Czy nowy błąd",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Błąd": {
+      "main": [
+        [
+          {
+            "node": "Alert o błędzie w pobraniu URL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML CENEO": {
+      "main": [
+        [
+          {
+            "node": "Oferty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Oferty": {
+      "main": [
+        [
+          {
+            "node": "Dane Ceneo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dane Ceneo": {
+      "main": [
+        [
+          {
+            "node": "Dane produktu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n Trigger": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Pobierz produkty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

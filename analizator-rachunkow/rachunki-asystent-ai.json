@@ -1,0 +1,265 @@
+{
+  "name": "Rachunki - Aiko",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "rachunki-lista",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        -208
+      ],
+      "id": "9af05fc8-2522-44b3-bd5b-eb29bd08d770",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_RACHUNKI",
+          "mode": "list",
+          "cachedResultName": "Rachunki"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "zaplacone",
+              "condition": "isFalse"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -576,
+        -208
+      ],
+      "id": "aabd3160-3ae7-4191-a853-63069fb3562c",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rachunki-zaplac",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        96
+      ],
+      "id": "4c1473ca-0c3a-44ae-b9a1-1e0a3952ac48",
+      "name": "Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_RACHUNKI",
+          "mode": "list",
+          "cachedResultName": "Rachunki"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $json.body.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "zaplacone": true,
+            "kwota": "={{ $json.body.kwota }}",
+            "data_zaplaty": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "oplata_id",
+              "displayName": "oplata_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "nazwa",
+              "displayName": "nazwa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "kategoria",
+              "displayName": "kategoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "kwota",
+              "displayName": "kwota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "okres",
+              "displayName": "okres",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "termin",
+              "displayName": "termin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "kto",
+              "displayName": "kto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "zrodlo",
+              "displayName": "zrodlo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "zaplacone",
+              "displayName": "zaplacone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "data_zaplaty",
+              "displayName": "data_zaplaty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        96
+      ],
+      "id": "b1923eaf-fc88-45ab-89d3-076eff70f05d",
+      "name": "Update row(s)"
+    },
+    {
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=✅ Zapłacone: {{ $json.nazwa }} – {{ $json.kwota }} zł",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "e4b2088c-28ed-4aae-8e81-54b5de56c235",
+      "name": "Potwierdzenie zapłaty",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)": {
+      "main": [
+        [
+          {
+            "node": "Potwierdzenie zapłaty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  }
+}

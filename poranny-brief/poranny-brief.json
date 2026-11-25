@@ -1,0 +1,1091 @@
+{
+  "name": "Poranny brief (portfolio)",
+  "nodes": [
+    {
+      "id": "1f0c2a10-6b1e-4c39-9a51-0a1b2c3d4e01",
+      "name": "Sekcja 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3020,
+        -840
+      ],
+      "parameters": {
+        "content": "## 1. Start\nCodziennie o 7:30, po restarcie serwera albo na komendę „brief teraz” z Telegrama. Dziennik pilnuje, żeby brief przyszedł raz dziennie, nawet gdy rano komputer był wyłączony.",
+        "width": 800,
+        "height": 1240,
+        "color": 5
+      }
+    },
+    {
+      "id": "1f0c2a10-6b1e-4c39-9a51-0a1b2c3d4e02",
+      "name": "Sekcja 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2120,
+        -840
+      ],
+      "parameters": {
+        "content": "## 2. Zbieranie danych\nRównolegle: wydarzenia z Kalendarza Google, prognoza pogody z API i najtańsze ceny dysków z bazy monitora cen.",
+        "width": 1200,
+        "height": 660,
+        "color": 2
+      }
+    },
+    {
+      "id": "1f0c2a10-6b1e-4c39-9a51-0a1b2c3d4e03",
+      "name": "Sekcja 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2120,
+        -150
+      ],
+      "parameters": {
+        "content": "## 3. AI streszcza newsy\nLokalny model AI robi z 8 najnowszych artykułów 3–5 punktów. Gdy RSS albo AI nie działa, brief i tak wychodzi – z komunikatem albo samymi nagłówkami.",
+        "width": 1200,
+        "height": 550,
+        "color": 6
+      }
+    },
+    {
+      "id": "1f0c2a10-6b1e-4c39-9a51-0a1b2c3d4e04",
+      "name": "Sekcja 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        -840
+      ],
+      "parameters": {
+        "content": "## 4. Wynik\nWszystko w jednej wiadomości na Telegramie. Wpis w dzienniku blokuje drugą wysyłkę tego samego dnia.",
+        "width": 760,
+        "height": 1240,
+        "color": 4
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f01",
+      "name": "Start ręczny",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2940,
+        -660
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f02",
+      "name": "Codziennie 7:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2940,
+        -420
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f03",
+      "name": "Po restarcie serwera",
+      "type": "n8n-nodes-base.n8nTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2940,
+        -220
+      ],
+      "parameters": {
+        "events": [
+          "init"
+        ]
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f04",
+      "name": "Sprawdź dziennik",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "alwaysOutputData": true,
+      "position": [
+        -2720,
+        -320
+      ],
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_BRIEF_LOG",
+          "mode": "list",
+          "cachedResultName": "Brief_log"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "data",
+              "keyValue": "={{ $now.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f05",
+      "name": "Wysłać teraz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -2500,
+        -320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "05f337a8-6753-4882-8515-74b18d1031b4",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "77474d62-2457-4922-bc62-ef715779fa70",
+              "leftValue": "={{ $now.hour * 60 + $now.minute }}",
+              "rightValue": 450,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f06",
+      "name": "Już wysłany – pomiń",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -2340,
+        -120
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f07",
+      "name": "Wiadomość na Telegramie",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -2940,
+        100
+      ],
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f08",
+      "name": "Komenda „brief teraz”?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -2720,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "5e2d62b7-6235-457d-aa1b-8a111beb4cab",
+              "leftValue": "={{ $json.message.text?.trim().toLowerCase() }}",
+              "rightValue": "brief teraz",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "940d0b19-45fc-40bc-85aa-4755ba2f79db",
+              "leftValue": "={{ $json.message.chat.id }}",
+              "rightValue": "TWOJE_TELEGRAM_CHAT_ID",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2a1d3b20-7c2f-4d4a-8b62-1b2c3d4e5f09",
+      "name": "Inna wiadomość – pomiń",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -2500,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a01",
+      "name": "Wydarzenia na dziś",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        -2040,
+        -700
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "twoj@email.com",
+          "mode": "list",
+          "cachedResultName": "twoj@email.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $now.startOf('day').toISO() }}",
+        "timeMax": "={{ $now.endOf('day').toISO() }}",
+        "options": {
+          "orderBy": "startTime",
+          "recurringEventHandling": "expand"
+        }
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a02",
+      "name": "Zbierz wydarzenia",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1820,
+        -700
+      ],
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "wydarzenia",
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a03",
+      "name": "Kalendarz – tekst",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1600,
+        -700
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c39f7d5f-d04b-45bc-b812-427c14bbefff",
+              "name": "kalendarz_tekst",
+              "value": "={{ $json.wydarzenia.some(e => e.error) ? '⚠️ Kalendarz niedostępny (sprawdź credentials Google)' : ($json.wydarzenia.filter(e => e.summary).map(e => '📅 ' + (e.start.dateTime ? DateTime.fromISO(e.start.dateTime).toFormat('HH:mm') : 'cały dzień') + ' – ' + e.summary).join('\\n') || 'Brak wydarzeń na dziś 🎉') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a04",
+      "name": "Prognoza (Open-Meteo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "position": [
+        -2040,
+        -520
+      ],
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "=52.7989"
+            },
+            {
+              "name": "longitude",
+              "value": "18.2639"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code"
+            },
+            {
+              "name": "timezone",
+              "value": "Europe/Warsaw"
+            },
+            {
+              "name": "forecast_days",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a05",
+      "name": "Pogoda – opis",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1820,
+        -520
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b77d68c-7cc5-46bd-a678-ef0fb14ba321",
+              "name": "temp_max",
+              "value": "={{ $json.daily.temperature_2m_max [0] }}",
+              "type": "number"
+            },
+            {
+              "id": "ad02d1ac-ba05-4271-bd46-6e1df71c409e",
+              "name": "temp_min",
+              "value": "={{ $json.daily.temperature_2m_min [0] }}",
+              "type": "number"
+            },
+            {
+              "id": "4fa2ecd7-a1c1-457a-9479-8af67fc6524b",
+              "name": "opady_proc",
+              "value": "={{ $json.daily.precipitation_probability_max [0]}}",
+              "type": "number"
+            },
+            {
+              "id": "3f4d4f04-4253-49d5-9f8a-974cb280b135",
+              "name": "kod_pogody",
+              "value": "={{ $json.daily.weather_code [0]}}",
+              "type": "number"
+            },
+            {
+              "id": "1996123a-0f83-465c-a697-4c097f3b94d9",
+              "name": "name",
+              "value": "={{ ({\n  0: '☀️ bezchmurnie',\n  1: '🌤️ przeważnie pogodnie',\n  2: '⛅ częściowe zachmurzenie',\n  3: '☁️ pochmurno',\n  45: '🌫️ mgła',\n  48: '🌫️ mgła osadzająca szadź',\n  51: '🌦️ lekka mżawka',\n  53: '🌦️ mżawka',\n  55: '🌧️ gęsta mżawka',\n  56: '🧊 marznąca mżawka',\n  57: '🧊 gęsta marznąca mżawka',\n  61: '🌧️ lekki deszcz',\n  63: '🌧️ deszcz',\n  65: '🌧️ ulewa',\n  66: '🧊 marznący deszcz',\n  67: '🧊 silny marznący deszcz',\n  71: '🌨️ lekki śnieg',\n  73: '🌨️ śnieg',\n  75: '❄️ intensywny śnieg',\n  77: '🌨️ śnieg ziarnisty',\n  80: '🌦️ przelotny deszcz',\n  81: '🌧️ przelotne opady',\n  82: '⛈️ gwałtowne ulewy',\n  85: '🌨️ przelotny śnieg',\n  86: '❄️ silne opady śniegu',\n  95: '⛈️ burza',\n  96: '⛈️ burza z gradem',\n  99: '⛈️ silna burza z gradem'\n})[$json.daily.weather_code[0]] ?? '❓ nieznany kod: ' + $json.daily.weather_code[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a06",
+      "name": "Ceny z monitora",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "alwaysOutputData": true,
+      "position": [
+        -2040,
+        -340
+      ],
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_PRODUKTY_DYSKI_SSD",
+          "mode": "list",
+          "cachedResultName": "Produkty / Dyski SSD"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "aktywny",
+              "condition": "isTrue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a07",
+      "name": "Sortuj po cenie",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        -1820,
+        -340
+      ],
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "ostatnia_cena"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a08",
+      "name": "Najtańsza oferta na dysk",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        -340
+      ],
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "Nazwa",
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a09",
+      "name": "Zbierz ceny",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1380,
+        -340
+      ],
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "dyski",
+        "include": "specifiedFields",
+        "fieldsToInclude": "Nazwa, sklep, ostatnia_cena, min_cena_30d",
+        "options": {}
+      }
+    },
+    {
+      "id": "3b2e4c30-8d3a-4e5b-9c73-2c3d4e5f6a10",
+      "name": "Ceny – tekst",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1160,
+        -340
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1225c424-5c85-4edf-8773-de077d314507",
+              "name": "ceny_tekst",
+              "value": "={{ $json.dyski.map (d => '💾 ' + d.Nazwa + ': ' + d.ostatnia_cena + ' zł (' + d.sklep + '), min 30 dni: ' + d.min_cena_30d + ' zł' + (d.ostatnia_cena <= d.min_cena_30d ? \" 🔥\" : \"\")).join('\\n') || 'brak aktywnych produktów' }} \n\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b01",
+      "name": "Newsy RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        -2040,
+        20
+      ],
+      "parameters": {
+        "url": "https://www.benchmark.pl/rss/aktualnosci-pliki.xml",
+        "options": {}
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b02",
+      "name": "8 najnowszych",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -1820,
+        20
+      ],
+      "parameters": {
+        "maxItems": 8
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b03",
+      "name": "Zbierz newsy",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        20
+      ],
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "artykuly",
+        "include": "specifiedFields",
+        "fieldsToInclude": "title, contentSnippet",
+        "options": {}
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b04",
+      "name": "AI streszcza newsy",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "onError": "continueErrorOutput",
+      "position": [
+        -1380,
+        20
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Jesteś redaktorem porannego briefu technologicznego.\nNa podstawie poniższych newsów napisz 3-5 najważniejszych punktów po polsku.\nKażdy punkt zaczynaj od \"• \", maksymalnie jedno zdanie na punkt.\nNie używaj Markdown ani HTML. Bez wstępu i podsumowania.\n\nNewsy:\n{{ $json.artykuly.map(a => '- ' + a.title + ': ' + a.contentSnippet).join('\\n') }}",
+        "batching": {}
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b05",
+      "name": "Model AI (lokalny)",
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        220
+      ],
+      "parameters": {
+        "model": "gemma4:latest",
+        "options": {
+          "think": false,
+          "temperature": 0.3
+        }
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b06",
+      "name": "RSS nie działa – komunikat",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1820,
+        220
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1c78712-23eb-442d-80a8-9d88dee36b6a",
+              "name": "text",
+              "value": "⚠️ Newsy niedostępne (RSS nie odpowiada)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4c3f5d40-9e4b-4f6c-8d84-3d4e5f6a7b07",
+      "name": "AI nie działa – same nagłówki",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1100,
+        220
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffea175d-9b58-47ca-832c-b2970a9e7d5a",
+              "name": "text",
+              "value": "=⚠️ LLM niedostępny, same nagłówki: {{ $('Zbierz newsy').first().json.artykuly.map(a => '• ' + a.title).join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5d4a6e50-af5c-406d-9e95-4e5f6a7b8c01",
+      "name": "Połącz w jedną wiadomość",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -820,
+        -280
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      }
+    },
+    {
+      "id": "5d4a6e50-af5c-406d-9e95-4e5f6a7b8c02",
+      "name": "Wyślij brief na Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "position": [
+        -580,
+        -260
+      ],
+      "parameters": {
+        "chatId": "TWOJE_TELEGRAM_CHAT_ID",
+        "text": "=🌅 <b>Dzień dobry!</b> {{ $now.setLocale('pl').toFormat('cccc, d LLLL') }}\n\n<b>Pogoda – Inowrocław</b>\n{{ $json.name }}\n🌡️ Minimalna temperatura dziś: {{ $json.temp_min }}°C\n🌡️ Maksymalna temperatura dziś: {{ $json.temp_max }}°C\n☔ Szansa opadów: {{ $json.opady_proc }}%\n\n<b>📅 Dziś w kalendarzu</b>\n{{ $json.kalendarz_tekst.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}\n\n<b>📰 Newsy</b>\n{{ $json.text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}\n\n<b>💾 Ceny dysków</b>\n{{ $json.ceny_tekst.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      }
+    },
+    {
+      "id": "5d4a6e50-af5c-406d-9e95-4e5f6a7b8c03",
+      "name": "Zapisz w dzienniku",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -360,
+        -260
+      ],
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_BRIEF_LOG",
+          "mode": "list",
+          "cachedResultName": "Brief_log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "data": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "data"
+          ],
+          "schema": [
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Start ręczny": {
+      "main": [
+        [
+          {
+            "node": "Wydarzenia na dziś",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prognoza (Open-Meteo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ceny z monitora",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Newsy RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codziennie 7:30": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź dziennik",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Po restarcie serwera": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź dziennik",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź dziennik": {
+      "main": [
+        [
+          {
+            "node": "Wysłać teraz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wysłać teraz?": {
+      "main": [
+        [
+          {
+            "node": "Wydarzenia na dziś",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prognoza (Open-Meteo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ceny z monitora",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Newsy RSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Już wysłany – pomiń",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wiadomość na Telegramie": {
+      "main": [
+        [
+          {
+            "node": "Komenda „brief teraz”?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Komenda „brief teraz”?": {
+      "main": [
+        [
+          {
+            "node": "Wydarzenia na dziś",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prognoza (Open-Meteo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ceny z monitora",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Newsy RSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inna wiadomość – pomiń",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wydarzenia na dziś": {
+      "main": [
+        [
+          {
+            "node": "Zbierz wydarzenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zbierz wydarzenia": {
+      "main": [
+        [
+          {
+            "node": "Kalendarz – tekst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kalendarz – tekst": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Prognoza (Open-Meteo)": {
+      "main": [
+        [
+          {
+            "node": "Pogoda – opis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pogoda – opis": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ceny z monitora": {
+      "main": [
+        [
+          {
+            "node": "Sortuj po cenie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sortuj po cenie": {
+      "main": [
+        [
+          {
+            "node": "Najtańsza oferta na dysk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Najtańsza oferta na dysk": {
+      "main": [
+        [
+          {
+            "node": "Zbierz ceny",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zbierz ceny": {
+      "main": [
+        [
+          {
+            "node": "Ceny – tekst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ceny – tekst": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Newsy RSS": {
+      "main": [
+        [
+          {
+            "node": "8 najnowszych",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RSS nie działa – komunikat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 najnowszych": {
+      "main": [
+        [
+          {
+            "node": "Zbierz newsy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zbierz newsy": {
+      "main": [
+        [
+          {
+            "node": "AI streszcza newsy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model AI (lokalny)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI streszcza newsy",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI streszcza newsy": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "AI nie działa – same nagłówki",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS nie działa – komunikat": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI nie działa – same nagłówki": {
+      "main": [
+        [
+          {
+            "node": "Połącz w jedną wiadomość",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Połącz w jedną wiadomość": {
+      "main": [
+        [
+          {
+            "node": "Wyślij brief na Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wyślij brief na Telegram": {
+      "main": [
+        [
+          {
+            "node": "Zapisz w dzienniku",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Warsaw",
+    "executionOrder": "v1"
+  }
+}
