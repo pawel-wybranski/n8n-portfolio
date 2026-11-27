@@ -9,14 +9,14 @@
         "responseData": "allEntries",
         "options": {}
       },
+      "id": "9af05fc8-2522-44b3-bd5b-eb29bd08d770",
+      "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
         -800,
         -208
-      ],
-      "id": "9af05fc8-2522-44b3-bd5b-eb29bd08d770",
-      "name": "Webhook"
+      ]
     },
     {
       "parameters": {
@@ -37,15 +37,15 @@
         },
         "returnAll": true
       },
+      "id": "aabd3160-3ae7-4191-a853-63069fb3562c",
+      "name": "Get row(s)",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
+      "alwaysOutputData": true,
       "position": [
         -576,
         -208
-      ],
-      "id": "aabd3160-3ae7-4191-a853-63069fb3562c",
-      "name": "Get row(s)",
-      "alwaysOutputData": true
+      ]
     },
     {
       "parameters": {
@@ -55,14 +55,14 @@
         "responseMode": "lastNode",
         "options": {}
       },
+      "id": "4c1473ca-0c3a-44ae-b9a1-1e0a3952ac48",
+      "name": "Webhook1",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
         -656,
         96
-      ],
-      "id": "4c1473ca-0c3a-44ae-b9a1-1e0a3952ac48",
-      "name": "Webhook1"
+      ]
     },
     {
       "parameters": {
@@ -195,14 +195,15 @@
         },
         "options": {}
       },
+      "id": "b1923eaf-fc88-45ab-89d3-076eff70f05d",
+      "name": "Update row(s)",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
         -432,
         96
       ],
-      "id": "b1923eaf-fc88-45ab-89d3-076eff70f05d",
-      "name": "Update row(s)"
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -212,15 +213,211 @@
           "appendAttribution": false
         }
       },
+      "id": "e4b2088c-28ed-4aae-8e81-54b5de56c235",
+      "name": "Potwierdzenie zapłaty",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "position": [
+        128,
+        80
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "TWOJA_TABELA_BLEDY_POWIADOMIEN",
+          "mode": "list",
+          "cachedResultName": "Bledy_powiadomien"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "kiedy": "={{ $now.toISO() }}",
+            "workflow": "={{ $workflow.name }}",
+            "rachunek": "={{ $('Update row(s)').item.json.nazwa }}",
+            "kwota": "={{ $('Update row(s)').item.json.kwota }}",
+            "blad": "={{ $json.error?.message ?? $json.error ?? 'nieznany błąd' }}",
+            "wyslane_ponownie": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "kiedy",
+              "displayName": "kiedy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "rachunek",
+              "displayName": "rachunek",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "kwota",
+              "displayName": "kwota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "blad",
+              "displayName": "blad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "wyslane_ponownie",
+              "displayName": "wyslane_ponownie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "7c1e4a52-9b3d-4f6e-8a21-3d5f0b9e6c14",
+      "name": "Zapisz błąd powiadomienia",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1f0c3d2-6b4e-4e8a-9c17-2d5b8e0f4a61",
+              "name": "status",
+              "value": "zaplacone_zapisane",
+              "type": "string"
+            },
+            {
+              "id": "b2e1d4c3-7c5f-4f9b-8d28-3e6c9f1a5b72",
+              "name": "powiadomienie",
+              "value": "nie_wyslane",
+              "type": "string"
+            },
+            {
+              "id": "c3f2e5d4-8d6a-4a0c-9e39-4f7d0a2b6c83",
+              "name": "komunikat",
+              "value": "={{ 'Zapisałam, że ' + $('Update row(s)').item.json.nazwa + ' jest zapłacone, ale potwierdzenie na Telegram nie doszło. Błąd jest zapisany w tabeli Bledy_powiadomien.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e3b8d6f1-2a47-4c9e-b5d0-8f61a2c73e95",
+      "name": "Odpowiedź: zapisano bez powiadomienia",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "2fe3b784-50fe-48cd-9bc5-9d547cd8b1cf",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
       "position": [
         -208,
         96
       ],
-      "id": "e4b2088c-28ed-4aae-8e81-54b5de56c235",
-      "name": "Potwierdzenie zapłaty",
-      "onError": "continueRegularOutput"
+      "id": "dc887e65-30d5-40a0-8832-4687001eff0d",
+      "name": "Czy rachunek znaleziony?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a038e803-e0cb-4e4e-bf94-03c9e736d73c",
+              "name": "status",
+              "value": "nie_znaleziono",
+              "type": "string"
+            },
+            {
+              "id": "bee1892c-0f52-4563-bf08-376b30a798fd",
+              "name": "komunikat",
+              "value": "=Nie znalazłam rachunku o id {{ $('Webhook1').item.json.body.id }}. Nic nie zapisałam.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        0,
+        304
+      ],
+      "id": "446cb474-88f0-4227-a1c5-17d6477a5c38",
+      "name": "odpowiedź, nie znaleziono rachunku"
     }
   ],
   "connections": {
@@ -250,7 +447,48 @@
       "main": [
         [
           {
+            "node": "Czy rachunek znaleziony?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Potwierdzenie zapłaty": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Zapisz błąd powiadomienia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zapisz błąd powiadomienia": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedź: zapisano bez powiadomienia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Czy rachunek znaleziony?": {
+      "main": [
+        [
+          {
             "node": "Potwierdzenie zapłaty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "odpowiedź, nie znaleziono rachunku",
             "type": "main",
             "index": 0
           }
